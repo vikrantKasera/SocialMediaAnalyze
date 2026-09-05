@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content-card form-card">
+    <div class="page-heading"><div><h1>{{ title|default:"Add Item" }}</h1></div></div>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="keyword">Keyword</label>
+            <input type="text" id="keyword" name="keyword" value="{{ object.keyword|default:keyword|default:'' }}" class="form-control form-control-custom" placeholder="Enter relevance keyword">
+        </div>
+
+        <div class="form-check mb-3">
+            <label for="is_active" class="form-check-label-inline" style="display:inline-flex;align-items:center;gap:8px;margin:0;line-height:1.2;">
+                <input type="checkbox" id="is_active" name="is_active" class="form-check-input" style="width:16px;height:16px;min-width:16px;min-height:16px;display:inline-block;vertical-align:middle;accent-color:#075be8;" {% if object.is_active or is_active %}checked{% endif %}> Active
+            </label>
+        </div>
+
+        <button class="primary-btn" type="submit">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

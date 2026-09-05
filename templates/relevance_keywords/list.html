@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Relevance Keyword{% endblock %}
+{% block content %}
+<div class="content-card table-card">
+    <div class="page-heading">
+        <div><h1>Relevance Keywords</h1><p>Manage keywords to ensure content relevance during the outreach process.</p></div>
+        <a href="{% url 'relevance_keywords:create' %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center">＋&nbsp; Add Relevance Keyword</a>
+    </div>
+    <div class="data-table-wrap">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Relevance Keyword</th><th class="actions-col">Actions</th></tr></thead>
+            <tbody>
+            {% for item in page_obj %}
+            <tr><td>{{ forloop.counter0|add:page_obj.start_index }}</td><td>{{ item.keyword }}</td>
+                <td class="actions-col"><a href="{% url 'relevance_keywords:edit' item.pk %}" class="edit-btn">♢&nbsp; Edit</a>
+                <a href="{% url 'relevance_keywords:delete' item.pk %}" class="delete-btn" data-confirm="Delete this keyword?">♧&nbsp; Delete</a></td></tr>
+            {% empty %}<tr><td colspan="3" class="empty">No relevance keywords found.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/pagination.html" with item_label="keywords" %}
+</div>
+{% endblock %}

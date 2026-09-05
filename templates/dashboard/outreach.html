@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}YouTube Outreach{% endblock %}
+{% block content %}
+<div class="content-card outreach-card">
+    <div class="outreach-header">
+        <div><h1>YouTube Outreach</h1><p>Search and analyze YouTube creators based on your configured criteria.</p></div>
+        <form method="post" action="{% url 'youtube:start_outreach' %}">
+            {% csrf_token %}<button class="primary-btn" type="submit">▶&nbsp; Start Outreach</button>
+        </form>
+    </div>
+    <div class="console-wrap">
+        <div class="console">
+            <span>[10:15:30] Starting YouTube outreach process...</span>
+            <span>[10:15:31] Initializing search modules...</span>
+            <span>[10:15:32] Searching for creators...</span>
+            <span>[10:15:45] 100 creators found</span>
+            <span>[10:16:10] 200 creators found</span>
+            <span>[10:17:05] 400 creators found</span>
+            <span>[10:17:35] 500 creators found</span>
+            <span>[10:18:05] 600 creators found</span>
+            <span>[10:18:35] 700 creators found</span>
+            <span>[10:19:05] 800 creators found</span>
+            <span>[10:19:35] 900 creators found</span>
+            <span>[10:20:05] 1000 creators found</span>
+            <span>[10:20:20] Filtering and validating data...</span>
+            <span>[10:20:45] Finalizing results...</span>
+            <span>[10:21:00] Found successfully!</span>
+            <span>[10:21:00] Process completed.</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

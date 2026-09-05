@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Included Countries{% endblock %}
+{% block content %}
+<div class="content-card countries-card">
+    <div class="page-heading">
+        <div>
+            <h1>Included Countries</h1>
+            <p>Manage countries to skip during the outreach process.</p>
+        </div>
+        <form method="post" action="{% url 'countries:create' %}" class="heading-action">
+            {% csrf_token %}
+            <select name="country" class="select-control compact-select">
+                <option value="">Select a country to skip...</option>
+                {% for country in available_countries %}<option value="{{ country }}">{{ country }}</option>{% endfor %}
+            </select>
+            <button class="primary-btn" type="submit">＋&nbsp; Add Country</button>
+        </form>
+    </div>
+
+    <h3>These countries are being skipped</h3>
+    <div class="country-list">
+        {% for country in countries %}
+        <div class="country-chip">
+            <span>{{ country.name }}</span>
+            <form method="post" action="{% url 'countries:delete' country.pk %}">
+                {% csrf_token %}<button type="submit">×</button>
+            </form>
+        </div>
+        {% empty %}<span class="muted">No countries selected.</span>{% endfor %}
+    </div>
+
+    <div class="add-country-block">
+        <h3>Add more country</h3>
+        <form method="post" action="{% url 'countries:create' %}" class="country-add-form">
+            {% csrf_token %}
+            <select name="country" class="select-control">
+                <option value="">Select a country to skip...</option>
+                {% for country in available_countries %}<option value="{{ country }}">{{ country }}</option>{% endfor %}
+            </select>
+            <button class="primary-btn" type="submit">＋&nbsp; Add Country</button>
+        </form>
+    </div>
+
+    <div class="info-box"><span class="info-circle">i</span> Creators from these countries will be skipped during the search and outreach process.</div>
+</div>
+{% endblock %}

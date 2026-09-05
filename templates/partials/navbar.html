@@ -1,0 +1,45 @@
+<header class="site-header">
+    <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+            <span class="brand-bar b1"></span>
+            <span class="brand-bar b2"></span>
+            <span class="brand-bar b3"></span>
+            <span class="brand-arrow"></span>
+        </div>
+        <div class="brand-title">Freewill Social Media Analyze System</div>
+    </div>
+</header>
+
+<nav class="top-nav">
+    <a href="{% url 'youtube:outreach' %}" class="nav-link {% if request.resolver_match.app_name == 'youtube' %}active{% endif %}">
+        <span class="youtube-icon">▷</span>
+        <span>YouTube Outreach</span>
+    </a>
+
+    <div class="settings-container">
+        <button type="button" class="nav-link settings-trigger" onclick="toggleSettings()">
+            <span class="settings-icon">⚙</span>
+            <span>Setting</span>
+            <span class="down-chevron">⌄</span>
+        </button>
+        <div id="settings-dropdown" class="settings-dropdown">
+            <a href="{% url 'search_keywords:list' %}" class="dropdown-item {% if request.resolver_match.app_name == 'search_keywords' %}selected{% endif %}">
+                <span class="drop-icon">⌕</span> Search Keyword
+            </a>
+            <a href="{% url 'countries:list' %}" class="dropdown-item {% if request.resolver_match.app_name == 'countries' %}selected{% endif %}">
+                <span class="drop-icon">◎</span> Included Countries
+            </a>
+            <a href="{% url 'relevance_keywords:list' %}" class="dropdown-item {% if request.resolver_match.app_name == 'relevance_keywords' %}selected{% endif %}">
+                <span class="drop-icon">◇</span> Relevance Keyword
+            </a>
+            <a href="{% url 'posting_criteria:edit' %}" class="dropdown-item {% if request.resolver_match.app_name == 'posting_criteria' %}selected{% endif %}">
+                <span class="drop-icon">▣</span> Posting Criteria
+            </a>
+        </div>
+    </div>
+
+    <a href="{% url 'access_keys:list' %}" class="nav-link access-nav {% if request.resolver_match.app_name == 'access_keys' %}active{% endif %}">
+        <span class="key-icon">⚿</span>
+        <span>Access Key</span>
+    </a>
+</nav>

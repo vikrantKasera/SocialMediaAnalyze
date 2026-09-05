@@ -1,0 +1,4 @@
+Django>=5.2,<6.0
+python-dotenv>=1.0
+google-api-python-client>=2.180
+openpyxl>=3.1

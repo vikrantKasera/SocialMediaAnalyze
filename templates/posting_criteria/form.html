@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Posting Criteria{% endblock %}
+{% block content %}
+<div class="content-card criteria-card">
+    <div class="page-heading"><div><h1>Posting Criteria</h1><p>Configure the criteria used to<br>filter and analyze creators during<br>the outreach process.</p></div></div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="criteria-list">
+            <div class="criteria-row"><div><h3>Min Subscribers</h3><p>Minimum subscribers required for creators.</p></div><input type="number" min="0" name="min_subscribers" value="{{ object.min_subscribers|default:0 }}" class="number-field"></div>
+            <div class="criteria-row"><div><h3>Max Subscribers</h3><p>Maximum subscribers allowed for creators.</p></div><input type="number" min="0" name="max_subscribers" value="{{ object.max_subscribers|default:1000000 }}" class="number-field"></div>
+            <div class="criteria-row"><div><h3>Minimum Views</h3><p>Minimum views required on recent long-form videos.</p></div><input type="number" min="0" name="min_views" value="{{ object.min_views|default:0 }}" class="number-field"></div>
+            <div class="criteria-row"><div><h3>Recency Days</h3><p>All of the last videos checked must be published within<br>this number of days.</p></div><input type="number" min="0" name="max_days_since_posting" value="{{ object.max_days_since_posting|default:30 }}" class="number-field"></div>
+            <div class="criteria-row"><div><h3>Additional Criteria</h3><p>Extra onboarding notes or matching criteria.</p></div><textarea name="additional_criteria" class="form-control form-control-custom" rows="4">{{ object.additional_criteria|default:'' }}</textarea></div>
+            <div class="criteria-row"><div><h3>Active</h3><p>Turn this set of criteria on or off.</p></div><label class="form-check-label-inline" style="display:inline-flex;align-items:center;gap:8px;line-height:1.2;"><input type="checkbox" name="is_active" class="form-check-input" style="width:16px;height:16px;min-width:16px;min-height:16px;display:inline-block;vertical-align:middle;accent-color:#075be8;" {% if object.is_active %}checked{% endif %}> Active</label></div>
+        </div>
+        <div class="info-box"><span class="info-circle">i</span><span>Note: YouTube's current Shorts cutoff is 180 seconds (as of 2026).<br>Lower it to 60 seconds if you prefer the older, stricter definition.</span></div>
+        <button class="primary-btn save-btn" type="submit">▣&nbsp; Save Changes</button>
+    </form>
+</div>
+{% endblock %}

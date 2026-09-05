@@ -1,0 +1,33 @@
+Add/merge these settings into SocialMediaAnalizer/settings.py:
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv(BASE_DIR / ".env")
+
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
+
+INSTALLED_APPS += [
+    "apps.dashboard",
+    "apps.access_keys",
+    "apps.search_keywords",
+    "apps.countries",
+    "apps.relevance_keywords",
+    "apps.posting_criteria",
+    "apps.results",
+    "apps.youtube",
+]
+
+TEMPLATES[0]["OPTIONS"]["context_processors"] += [
+    "apps.dashboard.context_processors.sidebar_context",
+]
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

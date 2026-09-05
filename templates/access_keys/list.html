@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Access Key{% endblock %}
+{% block content %}
+<div class="content-card table-card">
+    <div class="page-heading">
+        <div><h1>Access Key</h1><p>Add and manage your access keys. These keys are used to access YouTube Data API<br>for outreach and data collection.</p></div>
+        <a href="{% url 'access_keys:create' %}" class="btn btn-primary d-inline-flex align-items-center justify-content-center">＋&nbsp; Add Access Key</a>
+    </div>
+    <div class="data-table-wrap access-table">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Access Key</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            {% for item in page_obj %}
+            <tr>
+                <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+                <td><input class="key-input" value="{{ item.masked_key|default:item.key }}" placeholder="Add your access key" readonly></td>
+                <td>{% if item.is_active %}<span class="active-badge">Active</span> ✓{% else %}<span class="inactive-badge">Inactive</span>{% endif %}</td>
+                <td><a href="{% url 'access_keys:edit' item.pk %}" class="more-btn">•••</a></td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="empty">No access keys found.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/pagination.html" with item_label="access keys" %}
+</div>
+{% endblock %}
