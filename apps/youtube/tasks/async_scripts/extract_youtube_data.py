@@ -71,7 +71,7 @@ class RotatingYouTubeApi:
             key = self.keys[self.index]
             request_params = {**params, "key": key}
             try:
-                response = requests.request(method, endpoint, params=request_params, timeout=30)
+                response = requests.get(endpoint, params=request_params, timeout=30)
                 if response.ok:
                     return response.json()
                 error = HttpError(
@@ -293,7 +293,10 @@ def run_extraction(progress_callback=None) -> dict[str, Any]:
             channel_keywords.setdefault(channel_id, []).append(keyword)
         report(f"{len(channel_keywords)} creators found")
     new_ids = [channel_id for channel_id in channel_keywords if channel_id not in settings["existing"]]
-    report("Filtering and validating data...")
+    if not new_ids:
+        report("No new creators were collected. Skipping filtering and validation.")
+    else:
+        report(f"Filtering and validating {len(new_ids)} new creators...")
     creators = []
     for channel in fetch_details(api, new_ids, progress_callback=progress_callback):
         try:
@@ -307,6 +310,7 @@ def run_extraction(progress_callback=None) -> dict[str, Any]:
                 report(f"Creator limit reached: {settings['max_creators']}")
                 break
     report("Finalizing results...")
+    report("Saving creators and result file...")
     filename = export_and_save(creators, channel_keywords)
     report(f"Found successfully: {len(creators)} new creators")
     if filename is None:
