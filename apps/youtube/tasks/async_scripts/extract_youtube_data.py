@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import django
+import httplib2
 import openpyxl
 from django.core.files.base import ContentFile
 from googleapiclient.discovery import build
@@ -66,7 +67,14 @@ class RotatingYouTubeApi:
 
     def _client(self, key: str):
         if key not in self.clients:
-            self.clients[key] = build("youtube", "v3", developerKey=key, cache_discovery=False)
+            http = httplib2.Http(proxy_info=httplib2.proxy_info_from_environment())
+            self.clients[key] = build(
+                "youtube",
+                "v3",
+                developerKey=key,
+                cache_discovery=False,
+                http=http,
+            )
         return self.clients[key]
 
     def request(self, resource: str, method: str, **params: Any) -> dict[str, Any]:
@@ -74,13 +82,7 @@ class RotatingYouTubeApi:
             key = self.keys[self.index]
             try:
                 request = getattr(getattr(self._client(key), resource)(), method)(**params)
-                try:
-                    return request.execute()
-                except (OSError, socket.timeout) as error:
-                    self._report("Network error connecting to YouTube. Check production outbound HTTPS access.")
-                    raise YouTubeNetworkError(
-                        "Cannot connect to YouTube API. Verify that the production server allows outbound HTTPS (port 443)."
-                    ) from error
+                return request.execute()
             except HttpError as error:
                 if self._is_quota_error(error):
                     self._report("YouTube API key quota reached; switching to the next key...")
@@ -89,6 +91,11 @@ class RotatingYouTubeApi:
                 else:
                     raise
                 self.index = (self.index + 1) % len(self.keys)
+            except (OSError, socket.timeout) as error:
+                self._report("Network error connecting to YouTube. Check production outbound HTTPS access and proxy settings.")
+                raise YouTubeNetworkError(
+                    "Cannot connect to YouTube API. Verify HTTPS proxy settings and outbound access on port 443."
+                ) from error
         raise ApiKeysExhausted("All active YouTube API keys are invalid or have reached their quota.")
 
 
