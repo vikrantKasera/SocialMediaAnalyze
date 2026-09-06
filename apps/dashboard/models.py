@@ -14,6 +14,7 @@ class OutreachRun(models.Model):
 	)
 
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RUNNING)
+	limit = models.PositiveIntegerField(default=1000)
 	logs = models.JSONField(default=list, blank=True)
 	result_file = models.ForeignKey(
 		"results.ResultFile",

@@ -48,6 +48,9 @@
             actionForm.action = startUrl;
             actionButton.textContent = "▶  Start Outreach";
         };
+        const scrollToLatestLog = () => {
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        };
         const poll = async () => {
             try {
                 const response = await fetch(wrapper.dataset.statusUrl);
@@ -58,6 +61,7 @@
                     line.textContent = log;
                     return line;
                 }));
+                scrollToLatestLog();
                 if (data.status === "completed") {
                     if (data.result_url) {
                         download.href = data.result_url;
@@ -81,6 +85,7 @@
                 window.setTimeout(poll, 3000);
             }
         };
+        scrollToLatestLog();
         window.setTimeout(poll, 1000);
     })();
 </script>

@@ -4,8 +4,8 @@
 <div class="content-card table-card">
     <div class="page-heading"><div><h1>Result Files</h1><p>Download previously generated outreach result files.</p></div></div>
     <div class="full-results">
-    {% for result in page_obj %}
-        <div class="full-result-row"><div class="excel-box"><span>X</span></div><div class="result-meta"><div class="result-title">{{ result.name }}</div><div class="result-time">{{ result.created_at|date:"d M Y" }} <b>|</b> {{ result.created_at|date:"h:i A" }}</div></div><a href="{% url 'results:download' result.pk %}" class="download-btn">↓</a></div>
+    {% for result in results %}
+        <div class="full-result-row"><div class="excel-box"><span>X</span></div><div class="result-meta"><div class="result-title">{{ result.filename }}</div><div class="result-time">{{ result.created_at|date:"d M Y" }} <b>|</b> {{ result.created_at|date:"h:i A" }}</div></div><a href="{% url 'results:download' result.pk %}" class="download-btn">↓</a></div>
     {% empty %}<div class="empty">No result files available.</div>{% endfor %}
     </div>
     {% include "partials/pagination.html" with item_label="results" %}

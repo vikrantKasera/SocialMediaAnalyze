@@ -15,13 +15,7 @@ def set_limit(request):
             limit = max(1, int(request.POST.get("limit", 1000)))
         except (TypeError, ValueError):
             limit = 1000
-        from apps.posting_criteria.models import PostingCriteria
-
-        criteria = PostingCriteria.objects.filter(is_active=True).order_by("-updated_at").first()
-        if criteria is None:
-            criteria = PostingCriteria()
-        criteria.max_creators = limit
-        criteria.is_active = True
-        criteria.save()
+        request.session["limit"] = limit
+        request.session.modified = True
         messages.success(request, f"Limit updated to {limit}.")
     return redirect(request.META.get("HTTP_REFERER", "dashboard:index"))

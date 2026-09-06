@@ -2,6 +2,15 @@ from pathlib import Path
 from django.db import models
 
 
+class SeenChannel(models.Model):
+    channel_id = models.CharField(max_length=100, unique=True)
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.channel_id
+
+
 class Creator(models.Model):
     channel_id = models.CharField(max_length=100, unique=True)
     channel_name = models.CharField(max_length=255)

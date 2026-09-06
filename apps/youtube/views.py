@@ -24,7 +24,8 @@ def start_outreach(request):
     if running:
         return redirect("youtube:outreach")
 
-    run = OutreachRun.objects.create(logs=[])
+    limit = max(1, int(request.session.get("limit", 1000)))
+    run = OutreachRun.objects.create(limit=limit, logs=[])
     thread = threading.Thread(target=_execute_outreach, args=(run.pk,), daemon=True)
     thread.start()
     return redirect("youtube:outreach")
@@ -71,7 +72,7 @@ def _execute_outreach(run_id):
         current_run.save(update_fields=["logs"])
 
     try:
-        summary = run_extraction(progress_callback=log)
+        summary = run_extraction(progress_callback=log, result_limit=run.limit)
         if summary["filename"]:
             run.result_file = ResultFile.objects.get(filename=summary["filename"])
         run.status = OutreachRun.STATUS_COMPLETED

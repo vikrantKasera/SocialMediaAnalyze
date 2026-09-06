@@ -31,14 +31,19 @@ class YouTubeNetworkError(RuntimeError):
     pass
 
 
+class YouTubeApiError(RuntimeError):
+    pass
+
+
 class RotatingYouTubeApi:
     """Retry quota errors with the next active key from the database."""
 
-    def __init__(self, keys: list[str], progress_callback=None):
+    def __init__(self, keys: list[str], progress_callback=None, quota_callback=None):
         self.keys = keys
         self.index = 0
         self.clients = {}
         self.progress_callback = progress_callback
+        self.quota_callback = quota_callback
 
     def _report(self, message: str) -> None:
         if self.progress_callback:
@@ -79,12 +84,22 @@ class RotatingYouTubeApi:
                     response.content,
                 )
                 if self._is_quota_error(error):
+                    if self.quota_callback:
+                        self.quota_callback(key)
                     self._report("YouTube API key quota reached; switching to the next key...")
                 elif self._is_invalid_key_error(error):
                     self._report("YouTube API key is invalid; switching to the next key...")
                 else:
-                    response.raise_for_status()
+                    try:
+                        details = response.json().get("error", {}).get("message", response.text)
+                    except ValueError:
+                        details = response.text
+                    raise YouTubeApiError(
+                        f"YouTube API returned HTTP {response.status_code}: {details}"
+                    )
                 self.index = (self.index + 1) % len(self.keys)
+            except YouTubeApiError:
+                raise
             except (requests.RequestException, OSError, socket.timeout) as error:
                 self._report("Network error connecting to YouTube. Check production outbound HTTPS access and proxy settings.")
                 raise YouTubeNetworkError(
@@ -98,24 +113,33 @@ def setup_django() -> None:
     django.setup()
 
 
-def load_inputs(progress_callback=None) -> tuple[RotatingYouTubeApi, list[str], list[str], dict[str, Any]]:
+def load_inputs(progress_callback=None, result_limit: int | None = None) -> tuple[RotatingYouTubeApi, list[str], list[str], dict[str, Any]]:
     setup_django()
     from apps.access_keys.models import AccessKey
     from apps.countries.models import Country
     from apps.posting_criteria.models import PostingCriteria
     from apps.relevance_keywords.models import RelevanceKeyword
     from apps.search_keywords.models import SearchKeyword
-    from apps.results.models import Creator
+    from apps.results.models import Creator, SeenChannel
 
-    keys = list(AccessKey.objects.filter(is_active=True).values_list("key", flat=True))
+    today = django_timezone.localdate()
+    access_keys = list(AccessKey.objects.filter(is_active=True))
+    for access_key in access_keys:
+        if access_key.quota_exhausted_on and access_key.quota_exhausted_on < today:
+            access_key.quota_exhausted_on = None
+            access_key.save(update_fields=["quota_exhausted_on"])
+    available_keys = [access_key.key for access_key in access_keys if access_key.quota_exhausted_on != today]
+    keys = available_keys
     if not keys:
-        raise RuntimeError("No active YouTube API keys are configured.")
+        raise RuntimeError("All active YouTube API keys have reached today's saved quota limit.")
     keywords = list(SearchKeyword.objects.filter(is_active=True).values_list("keyword", flat=True))
     relevance = [value.lower() for value in RelevanceKeyword.objects.filter(is_active=True).values_list("keyword", flat=True)]
     excluded_countries = {value.upper() for value in Country.objects.filter(is_active=True).values_list("code", flat=True)}
     criteria = PostingCriteria.objects.filter(is_active=True).order_by("-updated_at").first()
+    run_limit = result_limit if result_limit is not None else (criteria.result_per_keyword if criteria else 10)
     settings = {
-        "result_limit": criteria.result_per_keyword if criteria else 10,
+        "run_limit": run_limit,
+        "result_limit": min(run_limit, 50),
         "pages": criteria.per_page_keyword if criteria else 1,
         "videos_to_check": criteria.video_to_check if criteria else 4,
         "recent_days": criteria.recent_days if criteria else 100,
@@ -123,11 +147,15 @@ def load_inputs(progress_callback=None) -> tuple[RotatingYouTubeApi, list[str], 
         "min_views": criteria.min_views if criteria else 0,
         "min_subscribers": criteria.min_subscribers if criteria else 0,
         "max_subscribers": criteria.max_subscribers if criteria else 1_000_000,
-        "max_creators": criteria.max_creators if criteria else 1000,
         "excluded_countries": excluded_countries,
     }
     existing = set(Creator.objects.values_list("channel_id", flat=True))
-    return RotatingYouTubeApi(keys, progress_callback=progress_callback), keywords, relevance, {**settings, "existing": existing}
+    existing.update(SeenChannel.objects.values_list("channel_id", flat=True))
+
+    def mark_quota_exhausted(key: str) -> None:
+        AccessKey.objects.filter(key=key).update(quota_exhausted_on=today)
+
+    return RotatingYouTubeApi(keys, progress_callback=progress_callback, quota_callback=mark_quota_exhausted), keywords, relevance, {**settings, "existing": existing}
 
 
 def parse_duration(value: str) -> int:
@@ -171,8 +199,15 @@ def fetch_details(api: RotatingYouTubeApi, channel_ids: list[str], progress_call
     return details
 
 
-def fetch_recent_videos(api: RotatingYouTubeApi, playlist_id: str, count: int) -> list[dict[str, Any]]:
-    response = api.request("playlistItems", "list", part="contentDetails", playlistId=playlist_id, maxResults=min(max(count, 15), 50))
+def fetch_recent_videos(api: RotatingYouTubeApi, playlist_id: str, count: int, progress_callback=None) -> list[dict[str, Any]]:
+    try:
+        response = api.request("playlistItems", "list", part="contentDetails", playlistId=playlist_id, maxResults=min(max(count, 15), 50))
+    except YouTubeApiError as error:
+        if "HTTP 404" in str(error):
+            if progress_callback:
+                progress_callback("Skipping creator with an unavailable uploads playlist.")
+            return []
+        raise
     ids = [item["contentDetails"]["videoId"] for item in response.get("items", [])]
     videos = []
     for batch in batches(ids):
@@ -181,7 +216,7 @@ def fetch_recent_videos(api: RotatingYouTubeApi, playlist_id: str, count: int) -
     return videos
 
 
-def evaluate_channel(api: RotatingYouTubeApi, channel: dict[str, Any], settings: dict[str, Any], relevance: list[str]) -> dict[str, Any] | None:
+def evaluate_channel(api: RotatingYouTubeApi, channel: dict[str, Any], settings: dict[str, Any], relevance: list[str], progress_callback=None) -> dict[str, Any] | None:
     snippet = channel.get("snippet", {})
     stats = channel.get("statistics", {})
     channel_id = channel["id"]
@@ -196,7 +231,7 @@ def evaluate_channel(api: RotatingYouTubeApi, channel: dict[str, Any], settings:
     uploads = channel.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
     if not uploads:
         return None
-    videos = fetch_recent_videos(api, uploads, settings["videos_to_check"])
+    videos = fetch_recent_videos(api, uploads, settings["videos_to_check"], progress_callback=progress_callback)
     relevant_text = f"{title} {description} " + " ".join(
         f"{video.get('snippet', {}).get('title', '')} {video.get('snippet', {}).get('description', '')}" for video in videos
     )
@@ -273,14 +308,17 @@ def export_and_save(creators: list[dict[str, Any]], keywords: dict[str, list[str
     return filename
 
 
-def run_extraction(progress_callback=None) -> dict[str, Any]:
+def run_extraction(progress_callback=None, result_limit: int | None = None) -> dict[str, Any]:
     def report(message: str) -> None:
         if progress_callback:
             progress_callback(message)
 
     report("Starting YouTube outreach process...")
     report("Initializing search modules...")
-    api, search_keywords, relevance, settings = load_inputs(progress_callback=progress_callback)
+    api, search_keywords, relevance, settings = load_inputs(
+        progress_callback=progress_callback,
+        result_limit=result_limit,
+    )
     channel_keywords: dict[str, list[str]] = {}
     report("Searching for creators...")
     for keyword in search_keywords:
@@ -291,6 +329,11 @@ def run_extraction(progress_callback=None) -> dict[str, Any]:
             break
         for channel_id in found_channel_ids:
             channel_keywords.setdefault(channel_id, []).append(keyword)
+        from apps.results.models import SeenChannel
+        SeenChannel.objects.bulk_create(
+            [SeenChannel(channel_id=channel_id) for channel_id in found_channel_ids],
+            ignore_conflicts=True,
+        )
         report(f"{len(channel_keywords)} creators found")
     new_ids = [channel_id for channel_id in channel_keywords if channel_id not in settings["existing"]]
     if not new_ids:
@@ -300,14 +343,14 @@ def run_extraction(progress_callback=None) -> dict[str, Any]:
     creators = []
     for channel in fetch_details(api, new_ids, progress_callback=progress_callback):
         try:
-            creator = evaluate_channel(api, channel, settings, relevance)
+            creator = evaluate_channel(api, channel, settings, relevance, progress_callback=progress_callback)
         except ApiKeysExhausted:
             report("All API keys are exhausted. Finalizing creators processed so far...")
             break
         if creator:
             creators.append(creator)
-            if len(creators) >= settings["max_creators"]:
-                report(f"Creator limit reached: {settings['max_creators']}")
+            if len(creators) >= settings["run_limit"]:
+                report(f"Creator limit reached: {settings['run_limit']}")
                 break
     report("Finalizing results...")
     report("Saving creators and result file...")

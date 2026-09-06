@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Creator, ResultFile
+from .models import Creator, ResultFile, SeenChannel
+
+
+@admin.register(SeenChannel)
+class SeenChannelAdmin(admin.ModelAdmin):
+    list_display = ("channel_id", "first_seen_at", "last_seen_at")
+    search_fields = ("channel_id",)
 
 
 @admin.register(Creator)

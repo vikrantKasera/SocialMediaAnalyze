@@ -5,6 +5,8 @@ class AccessKey(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    quota_limit = models.PositiveIntegerField(default=10000)
+    quota_exhausted_on = models.DateField(null=True, blank=True)
 
     @property
     def masked_key(self):
