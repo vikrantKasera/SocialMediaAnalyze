@@ -6,6 +6,7 @@ import io
 import json
 import os
 import re
+import socket
 from datetime import datetime, timezone
 from typing import Any
 
@@ -22,6 +23,10 @@ class ApiKeysExhausted(RuntimeError):
 
 
 class InvalidApiKey(RuntimeError):
+    pass
+
+
+class YouTubeNetworkError(RuntimeError):
     pass
 
 
@@ -69,7 +74,13 @@ class RotatingYouTubeApi:
             key = self.keys[self.index]
             try:
                 request = getattr(getattr(self._client(key), resource)(), method)(**params)
-                return request.execute()
+                try:
+                    return request.execute()
+                except (OSError, socket.timeout) as error:
+                    self._report("Network error connecting to YouTube. Check production outbound HTTPS access.")
+                    raise YouTubeNetworkError(
+                        "Cannot connect to YouTube API. Verify that the production server allows outbound HTTPS (port 443)."
+                    ) from error
             except HttpError as error:
                 if self._is_quota_error(error):
                     self._report("YouTube API key quota reached; switching to the next key...")
