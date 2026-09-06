@@ -11,10 +11,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 import django
-import httplib2
 import openpyxl
+import requests
 from django.core.files.base import ContentFile
-from googleapiclient.discovery import build
+from django.utils import timezone as django_timezone
 from googleapiclient.errors import HttpError
 from openpyxl.styles import Font
 
@@ -65,33 +65,27 @@ class RotatingYouTubeApi:
             message = str(error).lower()
         return "keyInvalid" in reasons or "api key not valid" in message
 
-    def _client(self, key: str):
-        if key not in self.clients:
-            http = httplib2.Http(proxy_info=httplib2.proxy_info_from_environment())
-            self.clients[key] = build(
-                "youtube",
-                "v3",
-                developerKey=key,
-                cache_discovery=False,
-                http=http,
-            )
-        return self.clients[key]
-
     def request(self, resource: str, method: str, **params: Any) -> dict[str, Any]:
+        endpoint = f"https://youtube.googleapis.com/youtube/v3/{resource}"
         for _ in range(len(self.keys)):
             key = self.keys[self.index]
+            request_params = {**params, "key": key}
             try:
-                request = getattr(getattr(self._client(key), resource)(), method)(**params)
-                return request.execute()
-            except HttpError as error:
+                response = requests.request(method, endpoint, params=request_params, timeout=30)
+                if response.ok:
+                    return response.json()
+                error = HttpError(
+                    type("Response", (), {"status": response.status_code, "reason": response.reason})(),
+                    response.content,
+                )
                 if self._is_quota_error(error):
                     self._report("YouTube API key quota reached; switching to the next key...")
                 elif self._is_invalid_key_error(error):
                     self._report("YouTube API key is invalid; switching to the next key...")
                 else:
-                    raise
+                    response.raise_for_status()
                 self.index = (self.index + 1) % len(self.keys)
-            except (OSError, socket.timeout) as error:
+            except (requests.RequestException, OSError, socket.timeout) as error:
                 self._report("Network error connecting to YouTube. Check production outbound HTTPS access and proxy settings.")
                 raise YouTubeNetworkError(
                     "Cannot connect to YouTube API. Verify HTTPS proxy settings and outbound access on port 443."
@@ -257,6 +251,10 @@ def export_and_save(creators: list[dict[str, Any]], keywords: dict[str, list[str
     if not creators:
         return None
 
+    def local_video_date(value: str) -> str:
+        published_at = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return django_timezone.localtime(published_at).strftime("%Y-%m-%d %H:%M:%S %Z")
+
     workbook = openpyxl.Workbook()
     sheet = workbook.active
     sheet.title = "Creators"
@@ -267,10 +265,10 @@ def export_and_save(creators: list[dict[str, Any]], keywords: dict[str, list[str
     for item in creators:
         item["search_keywords"] = keywords.get(item["channel_id"], [])
         Creator.objects.create(**item)
-        sheet.append([item["channel_name"], item["custom_url"] or item["channel_url"], item["subscribers"], item["country"], item["average_recent_views"], ", ".join(str(video["views"]) for video in item["recent_videos"]), item["recent_videos"][0]["published"][:10], item["days_since_oldest_video"], ", ".join(item["engagement_flags"]), ", ".join(item["search_keywords"])])
+        sheet.append([item["channel_name"], item["channel_url"], item["subscribers"], item["country"], item["average_recent_views"], ", ".join(str(video["views"]) for video in item["recent_videos"]), local_video_date(item["recent_videos"][0]["published"]), item["days_since_oldest_video"], ", ".join(item["engagement_flags"]), ", ".join(item["search_keywords"])])
     output = io.BytesIO()
     workbook.save(output)
-    filename = f"youtube_creators_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"youtube_creators_{django_timezone.localtime().strftime('%Y%m%d_%H%M%S')}.xlsx"
     ResultFile.objects.create(file=ContentFile(output.getvalue(), name=filename), filename=filename)
     return filename
 
