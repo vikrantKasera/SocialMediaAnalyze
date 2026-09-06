@@ -13,34 +13,20 @@
         </form>
     </section>
 
+    {% if recent_results %}
     <section class="side-panel result-panel">
         <h2>Result File List</h2>
         {% for result in recent_results|slice:":3" %}
             <div class="result-file">
                 <div class="excel-box"><span>X</span></div>
                 <div class="result-meta">
-                    <div class="result-title">{{ result.name }}</div>
+                    <div class="result-title">{{ result.filename }}</div>
                     <div class="result-time">{{ result.created_at|date:"d M Y" }} <b>|</b> {{ result.created_at|date:"h:i A" }}</div>
                 </div>
                 <a href="{% url 'results:download' result.pk %}" class="download-btn" title="Download">↓</a>
             </div>
-        {% empty %}
-            <div class="result-file">
-                <div class="excel-box"><span>X</span></div>
-                <div class="result-meta"><div class="result-title">Result_01.xlsx</div><div class="result-time">02 Jun 2025 <b>|</b> 10:21 AM</div></div>
-                <button class="download-btn" type="button">↓</button>
-            </div>
-            <div class="result-file">
-                <div class="excel-box"><span>X</span></div>
-                <div class="result-meta"><div class="result-title">Result_02.xlsx</div><div class="result-time">02 Jun 2025 <b>|</b> 09:15 AM</div></div>
-                <button class="download-btn" type="button">↓</button>
-            </div>
-            <div class="result-file">
-                <div class="excel-box"><span>X</span></div>
-                <div class="result-meta"><div class="result-title">Result_03.xlsx</div><div class="result-time">01 Jun 2025 <b>|</b> 08:40 PM</div></div>
-                <button class="download-btn" type="button">↓</button>
-            </div>
         {% endfor %}
         <a href="{% url 'results:list' %}" class="all-results">View All Results <span>›</span></a>
     </section>
+    {% endif %}
 </aside>

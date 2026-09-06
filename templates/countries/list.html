@@ -35,7 +35,7 @@
             {% csrf_token %}
             <select name="country" class="select-control">
                 <option value="">Select a country to skip...</option>
-                {% for country in available_countries %}<option value="{{ country }}">{{ country }}</option>{% endfor %}
+                {% for country in countries %}<option value="{{ country }}">{{ country }}</option>{% endfor %}
             </select>
             <button class="primary-btn" type="submit">＋&nbsp; Add Country</button>
         </form>

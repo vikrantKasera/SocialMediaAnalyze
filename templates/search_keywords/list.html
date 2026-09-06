@@ -10,8 +10,8 @@
         <table class="data-table">
             <thead><tr><th>#</th><th>Search Keyword</th><th class="actions-col">Actions</th></tr></thead>
             <tbody>
-            {% for item in page_obj %}
-            <tr><td>{{ forloop.counter0|add:page_obj.start_index }}</td><td>{{ item.keyword }}</td>
+            {% for item in search_keywords %}
+            <tr><td>{{ forloop.counter0|add:search_keywords.start_index }}</td><td>{{ item.keyword }}</td>
                 <td class="actions-col"><a href="{% url 'search_keywords:edit' item.pk %}" class="edit-btn">♢&nbsp; Edit</a>
                 <a href="{% url 'search_keywords:delete' item.pk %}" class="delete-btn" data-confirm="Remove this keyword?">♧&nbsp; Remove</a></td></tr>
             {% empty %}<tr><td colspan="3" class="empty">No search keywords found.</td></tr>{% endfor %}

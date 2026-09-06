@@ -14,6 +14,12 @@ def edit_criteria(request):
         obj.min_views = int(request.POST.get("min_views") or obj.min_views or 0)
         obj.max_days_since_posting = int(request.POST.get("max_days_since_posting") or obj.max_days_since_posting or 0)
         obj.additional_criteria = request.POST.get("additional_criteria", "")
+        obj.result_per_keyword = int(request.POST.get("result_per_keyword") or obj.result_per_keyword or 1)
+        obj.per_page_keyword = int(request.POST.get("per_page_keyword") or obj.per_page_keyword or 1)
+        obj.video_to_check = int(request.POST.get("video_to_check") or obj.video_to_check or 1)
+        obj.recent_days = int(request.POST.get("recent_days") or obj.recent_days or 1)
+        obj.shorts_max_second = int(request.POST.get("shorts_max_second") or obj.shorts_max_second or 1)
+
         obj.is_active = request.POST.get("is_active") == "on"
         obj.save()
         return redirect("posting_criteria:edit")

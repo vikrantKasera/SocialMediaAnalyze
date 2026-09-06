@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import ResultFile
+from .models import Creator, ResultFile
+
+
+@admin.register(Creator)
+class CreatorAdmin(admin.ModelAdmin):
+    list_display = ("channel_name", "country", "subscribers", "average_recent_views", "created_at")
+    search_fields = ("channel_name", "channel_id", "custom_url")
+    list_filter = ("country",)
 
 @admin.register(ResultFile)
 class ResultFileAdmin(admin.ModelAdmin):
